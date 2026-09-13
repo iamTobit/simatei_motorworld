@@ -1,0 +1,56 @@
+# ==========================================
+# 1. SERVER (Python / Flask Settings)
+# ==========================================
+server/__pycache__/
+server/*.py[cod]
+server/*$py.class
+server/*.so
+server/.Python
+server/*.egg-info/
+server/.installed.cfg
+server/*.egg
+
+# Virtual environments zilizo ndani ya server
+server/.venv/
+server/venv/
+server/env/
+server/ENV/
+
+# Faili za siri za mazingira (Environment variables)
+server/.env
+server/.env.*
+!server/.env.example
+
+# Migrations na Testing
+server/migrations/versions/*.py
+!server/migrations/versions/.gitkeep
+server/.pytest_cache/
+server/.coverage
+server/htmlcov/
+server/.tox/
+
+# ==========================================
+# 2. CLIENT / WEB (Node / Frontend Settings)
+# ==========================================
+# Kwa kuwa folder lako linaitwa 'client', nimebadilisha 'web/' kuwa 'client/'
+client/node_modules/
+client/dist/
+client/.next/
+client/build/
+client/.env
+client/.env.*
+
+# Logs
+*.log
+server/logs/
+client/npm-debug.log*
+client/yarn-error.log*
+
+# ==========================================
+# 3. SYSTEM & IDEs (Global Settings)
+# ==========================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
