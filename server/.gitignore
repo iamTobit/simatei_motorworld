@@ -1,34 +1,38 @@
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-.installed.cfg
-*.egg
+# Python virtual environments
 .venv/
 venv/
 env/
 ENV/
-.env
-.env.*
-!.env.example
-migrations/versions/*.py
-!migrations/versions/.gitkeep
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*$py.class
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
-*.log
+.mypy_cache/
+.pyre/
+
+# Package metadata
+*.egg-info/
+*.egg
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Database / runtime artifacts
+*.sqlite3
+*.db
 logs/
-node_modules/
-web/dist/
-web/.next/
-web/build/
-npm-debug.log*
-yarn-error.log*
-.DS_Store
-Thumbs.db
-.idea/
+
+# IDE / OS files
 .vscode/
-*.swp
+.idea/
+.DS_Store
+
+# Keep migration files tracked by default
+!migrations/versions/.gitkeep

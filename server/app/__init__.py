@@ -35,6 +35,11 @@ def create_app(config_name="development"):
     from .common.errors import register_error_handlers
     register_error_handlers(app)
 
+    @app.get("/")
+    def home():
+        return jsonify(status="ok",
+                        msg="Simatei world api is running")
+    
     @app.get("/health")
     def health():
         return jsonify(status="ok")

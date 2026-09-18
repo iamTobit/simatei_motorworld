@@ -6,8 +6,8 @@ load_dotenv()
 
 
 class BaseConfig:
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret-change-me")
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -28,7 +28,7 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "postgresql://fidel_db:simatei@localhost:5432/fidel",
+        "postgresql://dev:car_db2026@localhost:5432/car_db",
     )
 
 
