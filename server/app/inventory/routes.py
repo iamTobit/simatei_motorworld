@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import get_jwt_identity
-from .schemas import CarSchema, CarUpdateSchema, CarAvailabilityUpdateSchema
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from .schemas import CarSchema, CarUpdateSchema, CarAvailabilityUpdateSchema, CarCreateSchema
 from ..common.decorators import login_required
+from ..common.uploads import save_image, delete_image
+from ..common.utils import coerce_form
 from .services import (
     list_cars,
     get_car_or_404,
@@ -17,6 +19,7 @@ from ..extensions import db
 
 inventory_bp = Blueprint("inventory", __name__)
 
+car_create_schema = CarCreateSchema()
 car_schema = CarSchema()
 car_update_schema = CarUpdateSchema()
 availability_schema = CarAvailabilityUpdateSchema()
@@ -74,17 +77,21 @@ availability_schema = CarAvailabilityUpdateSchema()
 
 
 @inventory_bp.post("/cars")
-@login_required
+@jwt_required()
 def add_car():
-    from flask_jwt_extended import get_jwt_identity
-    from ..accounts.services import get_user_or_404
-
     user = get_user_or_404(int(get_jwt_identity()))
-    data = car_schema.load(request.get_json() or {})
-    car = create_car(user.id, data)
-    return jsonify(car=car.to_dict()), 201
 
+    image_files = request.files.getlist("images")
+    if not image_files:
+        return jsonify(error="At least one image is required"), 400
+    if len(image_files) > 10:
+        return jsonify(error="Maximum 10 images allowed"), 400
 
+    raw = request.form.to_dict() 
+    data = car_create_schema.load(raw)             # no 'images' key → no error
+
+    car = create_car(user.id, image_files=image_files, data=data)
+    return jsonify(car=car_schema.dump(car)), 201
 @inventory_bp.put("/cars/<int:car_id>")
 @login_required
 def put_car(car_id):

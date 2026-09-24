@@ -51,7 +51,7 @@ def generate_whatsapp(enquiry: Enquiry) -> str:
     if not enquiry.phone:
         raise NotFoundError("Enquiry has no phone number")
     default = (
-        f"Hello {enquiry.name}, thank you for your enquiry at SIMAT ET MOTOR WORLD. "
+        f"Hello {enquiry.name}, thank you for your enquiry at SIMATEI MOTOR WORLD. "
         f"How can we assist you further?"
     )
     return whatsapp_link(enquiry.phone, default)

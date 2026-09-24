@@ -2,6 +2,7 @@ from sqlalchemy import or_
 from ..extensions import db, cache
 from .models import Car, CarImage
 from ..common.errors import ForbiddenError, NotFoundError, APIError
+from ..common.uploads import save_image, delete_image
 
 
 def list_cars(filters: dict, page: int, limit: int):
@@ -54,18 +55,34 @@ def get_car_or_404(car_id: int) -> Car:
     return car
 
 
-def create_car(seller_id: int, data: dict) -> Car:
-    images = data.pop("images", [])
+from ..common.uploads import save_image, delete_image
+
+def create_car(seller_id: int, image_files: list, data: dict) -> Car:
+    """
+    image_files: list[FileStorage] from request.files.getlist("images")
+    data:        the rest of the car fields (no 'images' key)
+    """
     car = Car(seller_id=seller_id, **data)
     db.session.add(car)
     db.session.flush()  # get car.id
 
-    for i, url in enumerate(images):
-        db.session.add(CarImage(url=url, is_primary=(i == 0), car_id=car.id))
+    saved_paths = []
+    try:
+        for i, file in enumerate(image_files):
+            rel_path = save_image(file)
+            saved_paths.append(rel_path)
+            db.session.add(
+                CarImage(url=rel_path, is_primary=(i == 0), car_id=car.id)
+            )
+        db.session.commit()
+    except Exception:
+        # Roll back DB AND clean up any files already written
+        db.session.rollback()
+        for p in saved_paths:
+            delete_image(p)
+        raise
 
-    db.session.commit()
     return car
-
 
 def update_car(car: Car, actor, data: dict) -> Car:
     if car.seller_id != actor.id and actor.role != "admin":

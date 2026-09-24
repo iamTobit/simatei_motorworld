@@ -20,5 +20,8 @@ def is_strong_password(password):
 def whatsapp_link(phone: str, message: str) -> str:
     from urllib.parse import quote
 
-    clean = re.sub(r"[^0-9]", "", phone or "")
+    team_number = "254740892332"
+
+    clean = re.sub(r"[^0-9]", "", team_number)
+    
     return f"https://wa.me/{clean}?text={quote(message)}"
