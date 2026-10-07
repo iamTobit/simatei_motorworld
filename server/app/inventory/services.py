@@ -58,10 +58,7 @@ def get_car_or_404(car_id: int) -> Car:
 from ..common.uploads import save_image, delete_image
 
 def create_car(seller_id: int, image_files: list, data: dict) -> Car:
-    """
-    image_files: list[FileStorage] from request.files.getlist("images")
-    data:        the rest of the car fields (no 'images' key)
-    """
+
     car = Car(seller_id=seller_id, **data)
     db.session.add(car)
     db.session.flush()  # get car.id
@@ -76,7 +73,6 @@ def create_car(seller_id: int, image_files: list, data: dict) -> Car:
             )
         db.session.commit()
     except Exception:
-        # Roll back DB AND clean up any files already written
         db.session.rollback()
         for p in saved_paths:
             delete_image(p)
@@ -84,28 +80,53 @@ def create_car(seller_id: int, image_files: list, data: dict) -> Car:
 
     return car
 
-def update_car(car: Car, actor, data: dict) -> Car:
+def update_car(car: Car, actor, data: dict, image_files: list | None = None) -> Car:
     if car.seller_id != actor.id and actor.role != "admin":
         raise ForbiddenError("Not authorised to edit this car")
 
-    images = data.pop("images", None)
     for field, value in data.items():
         setattr(car, field, value)
 
-    if images is not None:
-        CarImage.query.filter_by(car_id=car.id).delete()
-        for i, url in enumerate(images):
-            db.session.add(CarImage(url=url, is_primary=(i == 0), car_id=car.id))
+    old_paths = []
+    new_paths = []
 
-    db.session.commit()
+    if image_files is not None:
+        old_paths = [img.url for img in car.images]
+        CarImage.query.filter_by(car_id=car.id).delete()
+
+        try:
+            for i, file in enumerate(image_files):
+                rel_path = save_image(file)
+                new_paths.append(rel_path)
+                db.session.add(
+                    CarImage(url=rel_path, is_primary=(i == 0), car_id=car.id)
+                )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            for p in new_paths:
+                delete_image(p)
+            raise
+
+        # only delete old files once DB is safely committed
+        for p in old_paths:
+            delete_image(p)
+
+    else:
+        db.session.commit()
+
     return car
 
 
 def delete_car(car: Car, actor):
     if car.seller_id != actor.id and actor.role != "admin":
         raise ForbiddenError("Not authorised to delete this car")
+
+    paths = [img.url for img in car.images]
     db.session.delete(car)
     db.session.commit()
+    for p in paths:
+        delete_image(p)
 
 
 def mark_status(car: Car, actor, is_sold=None, is_available=None) -> Car:
