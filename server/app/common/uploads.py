@@ -20,15 +20,12 @@ def save_image(file) -> str:
 
     ext = file.filename.rsplit(".", 1)[1].lower()
     filename = f"{uuid.uuid4().hex}.{ext}"
-    # secure_filename strips dangerous chars; uuid already makes it unique
     filename = secure_filename(filename)
 
-    upload_dir = current_app.config["UPLOAD_FOLDER"]  # e.g. 'static/uploads/cars'
+    upload_dir = current_app.config["UPLOAD_FOLDER"]  
     os.makedirs(upload_dir, exist_ok=True)
     file.save(os.path.join(upload_dir, filename))
 
-    # Return path relative to /static so url_for('static', filename=...) works
-    # e.g. "uploads/cars/abc123.jpg"
     return f"uploads/cars/{filename}"
 
 

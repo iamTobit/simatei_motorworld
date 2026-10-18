@@ -1,3 +1,5 @@
+// api/car.ts
+
 import { apiRequest, type QueryParams } from "./client";
 import type { Car, Paginated } from "./types";
 
