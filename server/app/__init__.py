@@ -14,6 +14,14 @@ def create_app(config_name="development"):
     cache.init_app(app)
     cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
 
+    # import models
+    from .accounts.models import User
+    from .inventory.models import Car
+    from .inventory.models import CarImage
+    from .enquiries.models import Enquiry
+    from .test_drives.models import TestDrive
+    from .favourites.models import Favourite
+
     # Register blueprints
     from .auth.routes import auth_bp
     from .accounts.routes import accounts_bp
