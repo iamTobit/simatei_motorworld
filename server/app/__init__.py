@@ -1,18 +1,23 @@
+import os
 from flask import Flask, jsonify
 from .config import config_by_name
 from .extensions import db, migrate, jwt, cache, cors
 
 
-def create_app(config_name="development"):
+def create_app(config_name=None):
+    if config_name is None:
+        config_name = os.getenv("FLASK_ENV", "development")
     app = Flask(__name__)
-    app.config.from_object(config_by_name[config_name])
+    config_cls = config_by_name.get(config_name, config_by_name["production"])
+    app.config.from_object(config_cls)
 
     # Init extensions
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
     cache.init_app(app)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    cors_origins = app.config.get("CORS_ORIGINS", "*")
+    cors.init_app(app, resources={r"/api/*": {"origins": cors_origins}})
 
     # Register blueprints
     from .auth.routes import auth_bp

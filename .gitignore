@@ -25,6 +25,8 @@ htmlcov/
 venv/
 env/
 ENV/
+.python-version
+**/.python-version
 
 # Local environment files
 .env
