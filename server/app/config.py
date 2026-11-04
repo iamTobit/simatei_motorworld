@@ -6,10 +6,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def _normalize_db_url(url: Optional[str]) -> Optional[str]:
-    if url and url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql://", 1)
-    return url
+def _normalize_db_url(url: Optional[str], fallback: str = "sqlite:///:memory:") -> str:
+    if not url or not url.strip():
+        return fallback
+    cleaned = url.strip()
+    if cleaned.startswith("postgres://"):
+        return cleaned.replace("postgres://", "postgresql://", 1)
+    return cleaned
 
 
 def _parse_cors_origins(raw: Optional[str]):
@@ -39,7 +42,7 @@ class BaseConfig:
     CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
     CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 
-    BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", 10))
+    BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS") or 10)
     BUSINESS_HOURS_START = 8
     BUSINESS_HOURS_END = 18
     ADMIN_CONTACT_PHONE = os.getenv("ADMIN_CONTACT_PHONE", "+254 740 892 332")
@@ -48,10 +51,8 @@ class BaseConfig:
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = _normalize_db_url(
-        os.getenv(
-            "DATABASE_URL",
-            "postgresql://dev:car_db2026@localhost:5432/car_db",
-        )
+        os.getenv("DATABASE_URL"),
+        fallback="postgresql://dev:car_db2026@localhost:5432/car_db",
     )
 
 

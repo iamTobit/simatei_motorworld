@@ -10,6 +10,10 @@ def create_app(config_name=None):
     app = Flask(__name__)
     config_cls = config_by_name.get(config_name, config_by_name["production"])
     app.config.from_object(config_cls)
+    if os.getenv("DATABASE_URL"):
+        from .config import _normalize_db_url
+
+        app.config["SQLALCHEMY_DATABASE_URI"] = _normalize_db_url(os.getenv("DATABASE_URL"))
 
     # Init extensions
     db.init_app(app)
@@ -42,11 +46,31 @@ def create_app(config_name=None):
 
     @app.get("/")
     def home():
-        return jsonify(status="ok",
-                        msg="Simatei world api is running")
-    
+        return jsonify(
+            status="ok",
+            msg="Simatei world api is running",
+            database_configured=bool(os.getenv("DATABASE_URL")),
+        )
+
     @app.get("/health")
     def health():
-        return jsonify(status="ok")
+        from sqlalchemy import text
+
+        db_ok = False
+        db_error = None
+        if not os.getenv("DATABASE_URL"):
+            db_error = "DATABASE_URL environment variable is not set"
+        else:
+            try:
+                db.session.execute(text("SELECT 1"))
+                db_ok = True
+            except Exception as exc:
+                db_error = str(exc)
+
+        return jsonify(
+            status="ok" if db_ok else "degraded",
+            database_connected=db_ok,
+            database_error=db_error,
+        )
 
     return app
