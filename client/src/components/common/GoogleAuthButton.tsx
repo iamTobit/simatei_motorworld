@@ -97,7 +97,9 @@ export function GoogleAuthButton({
   const [googleName, setGoogleName] = useState("");
   const googleBtnRef = useRef<HTMLDivElement>(null);
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const rawClientId = ((import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? "").trim();
+  const isSecretInsteadOfClientId = rawClientId.startsWith("GOCSPX-");
+  const clientId = rawClientId.endsWith(".apps.googleusercontent.com") ? rawClientId : "";
 
   // Handle Google Token response from real GIS
   async function handleGoogleSuccess(payload: { credential?: string; access_token?: string }) {
@@ -340,7 +342,22 @@ export function GoogleAuthButton({
             <div className="rounded-lg bg-muted/40 p-2.5 text-[11px] text-muted-foreground flex items-start gap-2">
               <Sparkles className="size-4 text-primary shrink-0 mt-0.5" aria-hidden="true" />
               <span>
-                To enable live Google Cloud OAuth in production, set <code className="font-mono text-foreground font-bold">VITE_GOOGLE_CLIENT_ID</code> in your <code className="font-mono">client/.env</code>.
+                {isSecretInsteadOfClientId ? (
+                  <>
+                    <strong className="text-destructive">Note:</strong>{" "}
+                    <code className="font-mono">VITE_GOOGLE_CLIENT_ID</code> is currently set to a{" "}
+                    <code className="font-mono">GOCSPX-...</code> <strong>Client Secret</strong>. Replace it with your{" "}
+                    <strong>Client ID</strong> (which ends in{" "}
+                    <code className="font-mono text-foreground font-bold">.apps.googleusercontent.com</code>).
+                  </>
+                ) : (
+                  <>
+                    To enable live Google Cloud OAuth in production, set{" "}
+                    <code className="font-mono text-foreground font-bold">VITE_GOOGLE_CLIENT_ID</code> (ending in{" "}
+                    <code className="font-mono">.apps.googleusercontent.com</code>) in your{" "}
+                    <code className="font-mono">client/.env</code>.
+                  </>
+                )}
               </span>
             </div>
           </div>
