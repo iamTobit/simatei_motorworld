@@ -37,7 +37,22 @@ def google_auth_user(data: dict) -> User:
     name = None
 
     credential = data.get("credential")
-    if credential:
+    access_token = data.get("access_token")
+    if access_token:
+        try:
+            resp = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                payload = resp.json()
+                email = payload.get("email")
+                name = payload.get("name") or payload.get("given_name")
+        except Exception:
+            pass
+
+    if not email and credential:
         try:
             resp = requests.get(
                 "https://oauth2.googleapis.com/tokeninfo",

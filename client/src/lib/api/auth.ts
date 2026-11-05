@@ -18,6 +18,7 @@ export function login(payload: { email: string; password: string }) {
 
 export function loginWithGoogle(payload: {
   credential?: string;
+  access_token?: string;
   email?: string;
   name?: string;
   google_id?: string;

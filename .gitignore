@@ -78,3 +78,5 @@ server/ENV/
 !server/migrations/versions/.gitkeep
 
 .lovable/
+.vercel/
+**/.vercel/

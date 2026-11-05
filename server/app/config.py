@@ -6,12 +6,63 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _extract_supabase_ref(supabase_url: Optional[str]) -> Optional[str]:
+    if not supabase_url:
+        return None
+    from urllib.parse import urlparse
+
+    host = urlparse(supabase_url.strip()).hostname or ""
+    if host.endswith(".supabase.co"):
+        return host.split(".")[0]
+    return None
+
+
 def _normalize_db_url(url: Optional[str], fallback: str = "sqlite:///:memory:") -> str:
     if not url or not url.strip():
         return fallback
-    cleaned = url.strip()
+    cleaned = url.strip().strip('"').strip("'")
     if cleaned.startswith("postgres://"):
-        return cleaned.replace("postgres://", "postgresql://", 1)
+        cleaned = cleaned.replace("postgres://", "postgresql://", 1)
+
+    import re
+    from urllib.parse import quote, unquote
+
+    # Rewrite IPv6-only Supabase direct host (db.<ref>.supabase.co) to IPv4 Supavisor pooler
+    direct_match = re.search(r"@db\.([a-z0-9]+)\.supabase\.co(?::\d+)?", cleaned)
+    if direct_match:
+        ref = direct_match.group(1)
+        pooler_region = os.getenv("SUPABASE_POOLER_REGION", "aws-0-eu-west-1")
+        cleaned = re.sub(
+            r"@db\.[a-z0-9]+\.supabase\.co(?::\d+)?",
+            f"@{pooler_region}.pooler.supabase.com:5432",
+            cleaned,
+            count=1,
+        )
+        if "://postgres:" in cleaned:
+            cleaned = cleaned.replace("://postgres:", f"://postgres.{ref}:", 1)
+
+    if ".pooler.supabase.com" in cleaned and "://postgres:" in cleaned:
+        ref = _extract_supabase_ref(os.getenv("SUPABASE_URL"))
+        if ref:
+            cleaned = cleaned.replace("://postgres:", f"://postgres.{ref}:", 1)
+
+    # Normalize credentials (strip accidental [PASSWORD] brackets and URL-encode special chars)
+    if "://" in cleaned and "@" in cleaned:
+        scheme, rest = cleaned.split("://", 1)
+        userinfo, hostpart = rest.rsplit("@", 1)
+        if ":" in userinfo:
+            user, raw_pw = userinfo.split(":", 1)
+            if raw_pw.startswith("[") and raw_pw.endswith("]"):
+                raw_pw = raw_pw[1:-1]
+            decoded_pw = unquote(raw_pw)
+            encoded_pw = quote(decoded_pw, safe="")
+            cleaned = f"{scheme}://{user}:{encoded_pw}@{hostpart}"
+
+    if cleaned.startswith("postgresql+psycopg://"):
+        try:
+            import psycopg  # noqa: F401
+        except ImportError:
+            cleaned = cleaned.replace("postgresql+psycopg://", "postgresql+psycopg2://", 1)
     return cleaned
 
 

@@ -39,6 +39,15 @@ declare global {
             },
           ) => void;
         };
+        oauth2?: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: { access_token?: string; error?: string }) => void;
+          }) => {
+            requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+          };
+        };
       };
     };
   }
@@ -91,10 +100,10 @@ export function GoogleAuthButton({
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   // Handle Google Token response from real GIS
-  async function handleGoogleSuccess(credential: string) {
+  async function handleGoogleSuccess(payload: { credential?: string; access_token?: string }) {
     setLoading(true);
     try {
-      const res = await authApi.loginWithGoogle({ credential });
+      const res = await authApi.loginWithGoogle(payload);
       setSession(res.user, res.token);
       toast.success(
         mode === "signup"
@@ -135,7 +144,7 @@ export function GoogleAuthButton({
           client_id: clientId,
           callback: (response) => {
             if (response.credential) {
-              void handleGoogleSuccess(response.credential);
+              void handleGoogleSuccess({ credential: response.credential });
             }
           },
         });
@@ -144,7 +153,18 @@ export function GoogleAuthButton({
   }, [clientId]);
 
   async function handleClick() {
-    if (clientId && window.google?.accounts?.id) {
+    if (clientId && window.google?.accounts?.oauth2) {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: "openid email profile",
+        callback: (response) => {
+          if (response.access_token) {
+            void handleGoogleSuccess({ access_token: response.access_token });
+          }
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: "select_account" });
+    } else if (clientId && window.google?.accounts?.id) {
       // Trigger official Google One Tap prompt
       window.google.accounts.id.prompt();
     } else {

@@ -1,3 +1,4 @@
+import json
 import mimetypes
 import os
 import urllib.error
@@ -22,6 +23,67 @@ def _supabase_storage_config():
     if url and key:
         return url, key, bucket
     return None
+
+
+def ensure_supabase_bucket() -> dict:
+    """Verify the configured Supabase Storage bucket exists (and is public), creating it if missing."""
+    sb_cfg = _supabase_storage_config()
+    if not sb_cfg:
+        return {"configured": False, "connected": False, "bucket": None, "error": "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set"}
+
+    supabase_url, service_key, bucket = sb_cfg
+    headers = {
+        "Authorization": f"Bearer {service_key}",
+        "apikey": service_key,
+        "Content-Type": "application/json",
+    }
+    bucket_url = f"{supabase_url}/storage/v1/bucket/{bucket}"
+    req = urllib.request.Request(bucket_url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8") or "{}")
+            return {
+                "configured": True,
+                "connected": True,
+                "bucket": bucket,
+                "public": data.get("public", True),
+                "error": None,
+            }
+    except urllib.error.HTTPError as exc:
+        if exc.code in (400, 404):
+            create_url = f"{supabase_url}/storage/v1/bucket"
+            payload = json.dumps({"id": bucket, "name": bucket, "public": True}).encode("utf-8")
+            create_req = urllib.request.Request(create_url, data=payload, headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(create_req, timeout=15):
+                    return {
+                        "configured": True,
+                        "connected": True,
+                        "bucket": bucket,
+                        "public": True,
+                        "created": True,
+                        "error": None,
+                    }
+            except Exception as create_exc:
+                return {
+                    "configured": True,
+                    "connected": False,
+                    "bucket": bucket,
+                    "error": str(create_exc),
+                }
+        return {
+            "configured": True,
+            "connected": False,
+            "bucket": bucket,
+            "error": f"HTTP {exc.code}: {exc.reason}",
+        }
+    except Exception as exc:
+        return {
+            "configured": True,
+            "connected": False,
+            "bucket": bucket,
+            "error": str(exc),
+        }
 
 
 def save_image(file) -> str:
@@ -65,6 +127,26 @@ def save_image(file) -> str:
                         status_code=502,
                     )
         except urllib.error.HTTPError as exc:
+            if exc.code in (400, 404):
+                ensure_supabase_bucket()
+                file.stream.seek(0)
+                retry_req = urllib.request.Request(
+                    upload_url,
+                    data=file.read(),
+                    headers={
+                        "Authorization": f"Bearer {service_key}",
+                        "apikey": service_key,
+                        "Content-Type": content_type,
+                        "x-upsert": "true",
+                    },
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(retry_req, timeout=30) as resp:
+                        if resp.status < 400:
+                            return f"{supabase_url}/storage/v1/object/public/{bucket}/{object_path}"
+                except Exception:
+                    pass
             raise APIError(
                 f"Failed to upload image to Supabase Storage ({exc.code})",
                 status_code=502,
