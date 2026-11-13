@@ -25,6 +25,8 @@ htmlcov/
 venv/
 env/
 ENV/
+.python-version
+**/.python-version
 
 # Local environment files
 .env
@@ -76,3 +78,5 @@ server/ENV/
 !server/migrations/versions/.gitkeep
 
 .lovable/
+.vercel/
+**/.vercel/

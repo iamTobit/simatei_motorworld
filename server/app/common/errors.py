@@ -1,6 +1,7 @@
 from flask import jsonify
 from marshmallow import ValidationError
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from ..extensions import db
 
 
 class APIError(Exception):
@@ -46,7 +47,13 @@ def register_error_handlers(app):
 
     @app.errorhandler(IntegrityError)
     def handle_integrity_error(err):
+        db.session.rollback()
         return jsonify({"error": "Database integrity error", "details": str(err.orig)}), 400
+
+    @app.errorhandler(SQLAlchemyError)
+    def handle_sqlalchemy_error(err):
+        db.session.rollback()
+        return jsonify({"error": "Database unavailable", "details": str(err)}), 503
 
     @app.errorhandler(404)
     def not_found(err):

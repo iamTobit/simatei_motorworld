@@ -3,9 +3,13 @@
  * Base URL comes from VITE_API_BASE_URL and already contains the /api prefix.
  */
 
-const BASE_URL = (
+const RAW_BASE_URL = (
   (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ?? "http://localhost:5000/api"
-).replace(/\/$/, "");
+)
+  .trim()
+  .replace(/\/+$/, "");
+
+const BASE_URL = RAW_BASE_URL.endsWith("/api") ? RAW_BASE_URL : `${RAW_BASE_URL}/api`;
 
 export const API_BASE_URL = BASE_URL;
 

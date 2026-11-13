@@ -36,3 +36,4 @@ logs/
 
 # Keep migration files tracked by default
 !migrations/versions/.gitkeep
+.vercel
